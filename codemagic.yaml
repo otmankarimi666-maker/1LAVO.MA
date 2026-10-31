@@ -1,0 +1,46 @@
+workflows:
+  android-build:
+    name: 1LAVO Android APK
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+    scripts:
+      - name: Generate Android platform
+        script: flutter create . --platforms=android --org com.one.lavo
+      - name: Add internet permission
+        script: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+          permission = '<uses-permission android:name="android.permission.INTERNET"/>'
+          if permission not in s:
+              s = s.replace('<application', permission + '\n    <application', 1)
+          p.write_text(s)
+          PY
+      - name: Get packages
+        script: flutter pub get
+      - name: Build APK
+        script: flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+
+  ios-build:
+    name: 1LAVO iOS compile check
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Generate iOS platform
+        script: flutter create . --platforms=ios --org com.one.lavo
+      - name: Get packages
+        script: flutter pub get
+      - name: Build iOS without signing
+        script: flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+      - /tmp/xcodebuild_logs/*.log
